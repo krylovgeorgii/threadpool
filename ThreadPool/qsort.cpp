@@ -13,7 +13,19 @@ void quickSort(threadpool::ThreadPool * th, const Iter & first, const Iter & las
 	auto dis = distance(first, last - 1);
 	if (dis > 0) {
 		Iter left = first, right = last - 1;
-		auto pivot = *(first + dis / 2);
+		auto pivot = [dis, first, left, right] {
+			auto middle = *(first + dis / 2);
+		
+			if (*left <= middle && middle <= *right || *left == * right) {
+				return middle;
+			}
+
+			if (middle <= *left && *left <= *right) {
+				return *left;
+			}
+
+			return *right;
+		}(); 
 
 		while (left < right) {
 			while (*left < pivot && left < right) {
@@ -26,7 +38,12 @@ void quickSort(threadpool::ThreadPool * th, const Iter & first, const Iter & las
 
 			if (left < right) {
 				std::iter_swap(right, left);
-				++left;
+
+				if (*left < pivot) {
+					++left;
+				} else {
+					--right;
+				}
 			}
 		}
 
@@ -37,14 +54,28 @@ void quickSort(threadpool::ThreadPool * th, const Iter & first, const Iter & las
 			++right;
 		}
 
-		th->addTask(quickSort<Iter>, th, first, left + 1);
-		th->addTask(quickSort<Iter>, th, right, last);
+		bool dis1 = distance(first, left) > 3;
+		bool dis2 = distance(right, last - 1) > 3;
+
+		if (dis1 && dis2) {
+			th->addTask(quickSort<Iter>, th, first, left + 1);
+			th->addTask(quickSort<Iter>, th, right, last);
+		} else if (dis1) {
+			th->addTask(quickSort<Iter>, th, first, left + 1);
+			quickSort(th, right, last);
+		} else if (dis2) {
+			th->addTask(quickSort<Iter>, th, right, last);
+			quickSort(th, first, left + 1);
+		} else {
+			quickSort(th, first, left + 1);
+			quickSort(th, right, last);
+		}
 	}
 }
 
 void f() {
 	threadpool::ThreadPool th(4);
-	std::vector<int> arr(50);
+	std::vector<int> arr(51);
 
 	std::srand(unsigned(std::time(0)));
 	for (auto&& t : arr) {
