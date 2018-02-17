@@ -103,7 +103,7 @@ void quickSort(Iter first, Iter last) {
 }
 
 template<class Func, class Arr>
-void sortFunc(Func&& sort, Arr arr) {
+void sortFunc(Func&& sort, Arr&& arr) {
 	sort(arr.begin(), arr.end());
 }
 
@@ -127,14 +127,14 @@ void f(size_t sizeArr) {
 		t = rand() % 10;
 	}
 
+
 	auto getTime_QSortThreadPool = [arr] {
 		std::vector<int> arrCopy(arr->size());
 		std::copy(arr->begin(), arr->end(), arrCopy.begin());
 		QSortThreadPool qsth(4);
 
 		auto startTime = std::chrono::steady_clock::now();
-		//sortFunc(qsth, arrCopy);
-		qsth(arrCopy.begin(), arrCopy.end());
+		sortFunc(qsth, arrCopy);
 		
 		while (qsth.th.getNumWorkThreads() != 0) {
 			using namespace std::chrono_literals;
@@ -151,7 +151,7 @@ void f(size_t sizeArr) {
 }
 
 int main() {
-	f(1'000);
+	f(100'000);
 
 	char c;
 	std::cin >> c;
