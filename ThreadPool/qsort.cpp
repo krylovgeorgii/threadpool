@@ -81,8 +81,9 @@ private:
 		if (dis > 0) {
 			auto border = partQSort(first, last, dis);
 
-			bool dis1 = distance(first, border - 1) > 3;
-			bool dis2 = distance(border, last - 1) > 3;
+			constexpr int distLimit = 10;
+			bool dis1 = distance(first, border - 1) > distLimit;
+			bool dis2 = distance(border, last - 1) > distLimit;
 
 			auto func = [this](Iter f, Iter l) { qSortTh(f, l); };
 
@@ -126,7 +127,7 @@ auto someSort(Func&& sort, Arr arr) {
 	sort(arrCopy.begin(), arrCopy.end());
 	auto finishTime = std::chrono::steady_clock::now();
 
-	return std::chrono::duration_cast<std::chrono::milliseconds>(finishTime - startTime).count();
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(finishTime - startTime).count();
 }
 
 void f(size_t sizeArr) {
@@ -138,17 +139,20 @@ void f(size_t sizeArr) {
 		t = rand() % 10;
 	}
 
-	std::cout << "std::sort " << someSort(std::sort<arrType::iterator>, arr) << std::endl;
-	std::cout << "quickSort " << someSort(quickSort<arrType::iterator>, arr) << std::endl;
+	auto time_stdsort = someSort(std::sort<arrType::iterator>, arr);
+	std::cout << "std::sort       " << time_stdsort << std::endl;
+	//std::cout << "quickSort " << someSort(quickSort<arrType::iterator>, arr) << std::endl;
 
-	QSortThreadPool<arrType::iterator> qsth(16);
+	QSortThreadPool<arrType::iterator> qsth(20);
 	using namespace std::chrono_literals;
 	std::this_thread::sleep_for(100ms);
+	auto time_QSortThreadPool = someSort(qsth, arr);
 	std::cout << "QSortThreadPool " << someSort(qsth, arr) << std::endl;
+	std::cout << "speedup " << double(time_stdsort) / time_QSortThreadPool << std::endl;
 }
 
 int main() {
-	f(50'000);
+	f(1'000'000);
 
 	char c;
 	std::cin >> c;
