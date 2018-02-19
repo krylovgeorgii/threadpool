@@ -11,44 +11,40 @@
 #include <algorithm>
 
 template<class Iter>
-Iter partQSort(Iter left, Iter right, int64_t dis) {
-	--right;
+Iter partQSort(Iter begin, Iter end, int64_t dis) {	
+	--end;
 
-	auto pivot = [dis, left, right] {
-		auto middle = *(left + dis / 2);
+	auto pivot = [dis, begin, end] {
+		auto middle = *(begin + dis / 2);
 
-		if (*left <= middle && middle <= *right || *left == *right) {
+		if (*begin <= middle && middle <= *end || *begin == *end) {
 			return middle;
 		}
 
-		if (middle <= *left && *left <= *right) {
-			return *left;
+		if (middle <= *begin && *begin <= *end) {
+			return *begin;
 		}
 
-		return *right;
+		return *end;
 	}();
 
-	while (left < right) {
-		while (*left < pivot && left < right) {
-			++left;
-		}
+	auto left = begin - 1, right = end + 1;
+	while (true) {
+		while (*(++left) < pivot);
 
-		while (pivot < *right && left < right) {
-			--right;
-		}
-
-		if (left < right) {
-			std::iter_swap(right, left);
-
-			if (*left < pivot) {
-				++left;
-			}
-			else {
-				--right;
+		while (pivot < *(--right)) {
+			if (right == begin) {
+				break;
 			}
 		}
+
+		if (right <= left) {
+			break;
+		}
+		std::iter_swap(left, right);
 	}
-
+	
+	std::iter_swap(left, end);
 	return left;
 }
 
@@ -58,7 +54,7 @@ public:
 	QSortThreadPool(size_t num) : th(num) { }
 
 	void operator() (Iter first, Iter last) {
-		qSortTh(first, last, std::distance(first, last));
+		qSortTh(first, last, std::distance(first, last) - 1);
 
 		while (th.getNumWorkThreads() != 0) {
 			using namespace std::chrono_literals;
@@ -85,7 +81,7 @@ private:
 			bool flagDis1 = dis1 > distLimit;
 			bool flagDis2 = dis2 > distLimit;
 
-			auto func = [this](Iter f, Iter l, int64_t dis) { qSortTh(f, l, dis); };
+			auto func = [this](Iter f, Iter l, int64_t dis) { qSortTh(f, l, dis - 1); };
 
 			if (flagDis1 && flagDis2) {
 				th.addTask(func, first, border, dis1);
@@ -109,14 +105,14 @@ private:
 	}
 };
 
-template<class Iter>
+template<class Iter> 
 void quickSort(Iter first, Iter last) {
-	quickSort2(first, last, std::distance(first, last));
+	quickSort2(first, last, std::distance(first, last) - 1);
 }
 
-template<class Iter>
+template<class Iter> 
 void quickSort2(Iter first, Iter last, int64_t dis) {
-	constexpr int distLimit = 1;
+	constexpr int distLimit = 10;
 
 	if (dis > distLimit) {
 		auto border = partQSort(first, last, dis);
@@ -124,7 +120,7 @@ void quickSort2(Iter first, Iter last, int64_t dis) {
 		auto sortFunc = [distLimit](Iter begin, Iter end) {
 			auto dis = std::distance(begin, end);
 			if (dis > distLimit) {
-				quickSort2(begin, end, dis);
+				quickSort2(begin, end, dis - 1);
 			} else  {
 				std::sort(begin, end);
 			}
@@ -147,7 +143,6 @@ auto someSort(Func&& sort, Arr arr) {
 	auto finishTime = std::chrono::steady_clock::now();
 
 	std::cout << (validation(arrCopy.begin(), arrCopy.end()) ? "sorted" : "not sorted!!!") << std::endl;
-
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(finishTime - startTime).count();
 }
 
@@ -167,17 +162,14 @@ bool validation(Iter begin, Iter end) {
 }
 
 void f(size_t sizeArr) {
+	auto endStr = "ns\n";
 	using arrType = std::vector<int>;
-	auto list = { 1, 2, 3 };
-	//auto arr = std::make_shared<arrType>(list); 
 	auto arr = std::make_shared<arrType>(sizeArr);
 
 	std::srand(unsigned(std::time(0)));
 	for (auto&& t : *arr) {
 		t = rand() % 10;
 	}
-
-	auto endStr = "ns\n";
 
 	auto time_stdsort = someSort(std::sort<arrType::iterator>, arr);
 	std::cout << "std::sort       " << time_stdsort << endStr << std::endl;
@@ -197,7 +189,7 @@ void f(size_t sizeArr) {
 }
 
 int main() {
-	f(100);
+	f(1'000'000);
 
 	char c;
 	std::cin >> c;
