@@ -127,7 +127,24 @@ auto someSort(Func&& sort, Arr arr) {
 	sort(arrCopy.begin(), arrCopy.end());
 	auto finishTime = std::chrono::steady_clock::now();
 
+	std::cout << (validation(arrCopy.begin(), arrCopy.end()) ? "sorted" : "not sorted!!!") << std::endl;
+
 	return std::chrono::duration_cast<std::chrono::nanoseconds>(finishTime - startTime).count();
+}
+
+template<class Iter>
+bool validation(Iter begin, Iter end) {
+	if (begin != end) {
+		--end;
+	}
+
+	while (end != begin) {
+		if (*(end--) < *end) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void f(size_t sizeArr) {
@@ -140,19 +157,20 @@ void f(size_t sizeArr) {
 	}
 
 	auto time_stdsort = someSort(std::sort<arrType::iterator>, arr);
-	std::cout << "std::sort       " << time_stdsort << std::endl;
+	std::cout << "std::sort       " << time_stdsort << " nanosec" << std::endl;
 	//std::cout << "quickSort " << someSort(quickSort<arrType::iterator>, arr) << std::endl;
 
 	QSortThreadPool<arrType::iterator> qsth(20);
 	using namespace std::chrono_literals;
-	std::this_thread::sleep_for(100ms);
+	std::this_thread::sleep_for(30ms);
+
 	auto time_QSortThreadPool = someSort(qsth, arr);
-	std::cout << "QSortThreadPool " << someSort(qsth, arr) << std::endl;
+	std::cout << "QSortThreadPool " << time_QSortThreadPool << " nanosec" << std::endl;
 	std::cout << "speedup " << double(time_stdsort) / time_QSortThreadPool << std::endl;
 }
 
 int main() {
-	f(1'000'000);
+	f(100'000);
 
 	char c;
 	std::cin >> c;
