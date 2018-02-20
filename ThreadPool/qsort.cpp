@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-template<class Iter>
+template<class Iter> 
 void insertionSort(Iter begin, Iter end) {
 	for (auto it = begin; it != end; ++it) {
 		std::rotate(std::upper_bound(begin, it, *it), it, it + 1);
@@ -23,7 +23,7 @@ struct Iters2El {
 	Iter right;
 };
 
-template<class Iter>
+template<class Iter> 
 Iters2El<Iter> partQSort(Iter begin, Iter end, int64_t dis) {
 	--end;
 
@@ -80,10 +80,10 @@ public:
 	void operator() (Iter first, Iter last) {
 		qSortTh(first, last, std::distance(first, last) - 1);
 
-		while (th.getNumWorkThreads() != 0) {
+		do {
 			using namespace std::chrono_literals;
 			std::this_thread::sleep_for(10ms);
-		}
+		} while (th.getNumWorkThreads() != 0);
 	}
 
 	void resize(size_t num) {
@@ -93,6 +93,7 @@ public:
 private:
 	threadpool::ThreadPool th;
 
+	
 	void qSortTh(Iter first, Iter last, int64_t dis) {
 		constexpr auto distLimit = 500;
 
@@ -135,7 +136,7 @@ void quickSort(Iter first, Iter last) {
 	quickSort2(first, last, std::distance(first, last) - 1);
 }
 
-template<class Iter>
+template<class Iter> inline
 void quickSort2(Iter first, Iter last, int64_t dis) {
 	constexpr int distLimit = 500;
 
@@ -218,7 +219,7 @@ void f(size_t sizeArr) {
 }
 
 int main() {
-	f(100'000);
+	f(1'000'000);
 
 	char c;
 	std::cin >> c;
