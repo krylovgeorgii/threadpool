@@ -11,24 +11,27 @@
 #include <algorithm>
 
 template<class Iter>
-Iter partQSort(Iter begin, Iter end, int64_t dis) {	
+void insertionSort(Iter begin, Iter end) {
+	for (auto it = begin; it != end; ++it) {
+		std::rotate(std::upper_bound(begin, it, *it), it, it + 1);
+	}
+}
+
+template<class Iter>
+struct Iters2El {
+	Iter left;
+	Iter right;
+};
+
+template<class Iter>
+Iters2El<Iter> partQSort(Iter begin, Iter end, int64_t dis) {
 	--end;
 
-	auto pivot = [dis, begin, end] {
-		auto middle = *(begin + dis / 2);
+	auto pivot = *end;
 
-		if (*begin <= middle && middle <= *end || *begin == *end) {
-			return middle;
-		}
+	auto left = begin - 1, right = end;
+	auto leftEq = left, rightEq = end;
 
-		if (middle <= *begin && *begin <= *end) {
-			return *begin;
-		}
-
-		return *end;
-	}();
-
-	auto left = begin - 1, right = end + 1;
 	while (true) {
 		while (*(++left) < pivot);
 
@@ -41,11 +44,32 @@ Iter partQSort(Iter begin, Iter end, int64_t dis) {
 		if (right <= left) {
 			break;
 		}
+
 		std::iter_swap(left, right);
+
+		if (*left == pivot) {
+			std::iter_swap(++leftEq, left);
+		}
+
+		if (*right == pivot) {
+			std::iter_swap(--rightEq, right);
+		}
 	}
-	
+
 	std::iter_swap(left, end);
-	return left;
+	right = left + 1;
+	--left;
+
+	for (; begin < leftEq; ++begin, --left) {
+		std::iter_swap(begin, left);
+	}
+
+	for (--end; end > rightEq; --end, ++right) {
+		std::iter_swap(right, end);
+	}
+
+	++left;
+	return Iters2El<Iter> { left, right };
 }
 
 template<class Iter>
@@ -69,14 +93,14 @@ public:
 private:
 	threadpool::ThreadPool th;
 
-	void qSortTh (Iter first, Iter last, int64_t dis) {
-		constexpr auto distLimit = 10;
+	void qSortTh(Iter first, Iter last, int64_t dis) {
+		constexpr auto distLimit = 500;
 
 		if (dis > distLimit) {
 			auto border = partQSort(first, last, dis);
 
-			auto dis1 = std::distance(first, border);
-			auto dis2 = std::distance(border, last);
+			auto dis1 = std::distance(first, border.left);
+			auto dis2 = std::distance(border.right, last);
 
 			bool flagDis1 = dis1 > distLimit;
 			bool flagDis2 = dis2 > distLimit;
@@ -84,35 +108,36 @@ private:
 			auto func = [this](Iter f, Iter l, int64_t dis) { qSortTh(f, l, dis - 1); };
 
 			if (flagDis1 && flagDis2) {
-				th.addTask(func, first, border, dis1);
-				th.addTask(func, border, last, dis2);
+				th.addTask(func, first, border.left, dis1);
+				th.addTask(func, border.right, last, dis2);
 			}
 			else if (flagDis1) {
-				th.addTask(func, first, border, dis1);
-				std::sort(border, last);
+				th.addTask(func, first, border.left, dis1);
+				insertionSort(border.right, last);
 			}
 			else if (flagDis2) {
-				th.addTask(func, border, last, dis2);
-				std::sort(first, border);
+				th.addTask(func, border.right, last, dis2);
+				insertionSort(first, border.left);
 			}
 			else {
-				std::sort(first, border);
-				std::sort(border, last);
+				insertionSort(first, border.left);
+				insertionSort(border.right, last);
 			}
-		} else {
-			std::sort(first, last);
+		}
+		else {
+			insertionSort(first, last);
 		}
 	}
 };
 
-template<class Iter> 
+template<class Iter>
 void quickSort(Iter first, Iter last) {
 	quickSort2(first, last, std::distance(first, last) - 1);
 }
 
-template<class Iter> 
+template<class Iter>
 void quickSort2(Iter first, Iter last, int64_t dis) {
-	constexpr int distLimit = 10;
+	constexpr int distLimit = 500;
 
 	if (dis > distLimit) {
 		auto border = partQSort(first, last, dis);
@@ -121,15 +146,17 @@ void quickSort2(Iter first, Iter last, int64_t dis) {
 			auto dis = std::distance(begin, end);
 			if (dis > distLimit) {
 				quickSort2(begin, end, dis - 1);
-			} else  {
-				std::sort(begin, end);
+			}
+			else {
+				insertionSort(begin, end);
 			}
 		};
 
-		sortFunc(first, border);
-		sortFunc(border, last);		
-	} else {
-		std::sort(first, last);
+		sortFunc(first, border.left);
+		sortFunc(border.right, last);
+	}
+	else {
+		insertionSort(first, last);
 	}
 }
 
@@ -168,7 +195,7 @@ void f(size_t sizeArr) {
 
 	std::srand(unsigned(std::time(0)));
 	for (auto&& t : *arr) {
-		t = rand() % 10;
+		t = rand() % 1000;
 	}
 
 	auto time_stdsort = someSort(std::sort<arrType::iterator>, arr);
@@ -177,19 +204,21 @@ void f(size_t sizeArr) {
 	auto time_quickSort = someSort(quickSort<arrType::iterator>, arr);
 	std::cout << "quickSort       " << time_quickSort << endStr << std::endl;
 
-	QSortThreadPool<arrType::iterator> qsth(20);
+	QSortThreadPool<arrType::iterator> qsth(10);
 	using namespace std::chrono_literals;
 	std::this_thread::sleep_for(30ms);
 
 	auto time_QSortThreadPool = someSort(qsth, arr);
 	std::cout << "QSortThreadPool " << time_QSortThreadPool << endStr << std::endl;
+	qsth.resize(0);
 
 	std::cout << "speedup std::sort  " << double(time_stdsort) / time_QSortThreadPool << std::endl;
 	std::cout << "speedup quickSort  " << double(time_quickSort) / time_QSortThreadPool << std::endl;
+	std::cout << "\nspeedup stdsort/quickSort  " << double(time_stdsort) / time_quickSort << std::endl;
 }
 
 int main() {
-	f(1'000'000);
+	f(100'000);
 
 	char c;
 	std::cin >> c;
