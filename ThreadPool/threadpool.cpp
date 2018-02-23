@@ -10,8 +10,9 @@ namespace threadpool {
 	};
 
 	size_t ThreadPool::getNumWorkThreads() {
-		std::lock_guard<std::mutex> lock(mutexAddThread);
-		std::lock_guard<std::mutex> lock2(mutexTask);
+		std::unique_lock<std::mutex> lock1(mutexAddThread, std::defer_lock);
+		std::unique_lock<std::mutex> lock2(mutexTask, std::defer_lock);
+		std::lock(lock1, lock2);
 		return numWorkThreads;
 	};
 
