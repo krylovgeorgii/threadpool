@@ -27,6 +27,7 @@ template<class Iter>
 Iters2El<Iter> partQSort(Iter begin, Iter end, int64_t dist) {
 	--end;
 
+	//move pivot element to the end 
 	std::iter_swap(begin + dist / 2, end);
 	auto pivot = *end;
 
@@ -34,37 +35,47 @@ Iters2El<Iter> partQSort(Iter begin, Iter end, int64_t dist) {
 	auto leftEq = left, rightEq = end;
 
 	while (true) {
+		//find first element not smaller than pivot
 		while (*(++left) < pivot);
 
+		//find last element not bigger than pivot
 		while (pivot < *(--right)) {
+			//check that all elements are swaped
 			if (right == begin) {
 				break;
 			}
 		}
 
+		//check that all elements are swaped
 		if (right <= left) {
 			break;
 		}
 
+		//swap not smaller element on the left with not bigger element on the right
 		std::iter_swap(left, right);
 
 		if (*left == pivot) {
+			//mmove to begin an element equal to pivot
 			std::iter_swap(++leftEq, left);
 		}
 
 		if (*right == pivot) {
+			//move to end an element equal to pivot
 			std::iter_swap(--rightEq, right);
 		}
 	}
 
+	//move pivot element from the end
 	std::iter_swap(left, end);
 	right = left + 1;
 	--left;
 
+	//move to middle from begin all elements equal to pivot
 	for ( ; begin < leftEq; ++begin, --left) {
 		std::iter_swap(begin, left);
 	}
 
+	// move to middle from end all elements equal to pivot
 	for (--end; end > rightEq; --end, ++right) {
 		std::iter_swap(right, end);
 	}
@@ -93,7 +104,7 @@ public:
 
 private:
 	threadpool::ThreadPool th;
-	const int distLimit = 250;
+	const int distLimit = 250;	//experimental value
 
 	void qSortTh(Iter first, Iter last, int64_t dist) {
 		if (dist > distLimit) {
@@ -144,16 +155,14 @@ public:
 	}
 
 private:
-	struct Iters2ElDist {
-		Iters2ElDist(Iter l, Iter r, int64_t d) : left(l), right(r), dist(d) { }
+	struct Iters2ElDist : public Iters2El<Iter> {
+		Iters2ElDist(Iter l, Iter r, int64_t d) : Iters2El<Iter>{ l, r }, dist(d) { }
 
-		Iter left;
-		Iter right;
 		int64_t dist;
 	};
 
 	std::queue<Iters2ElDist> queueToSort;
-	const int distLimit = 100;
+	const int distLimit = 100;	//experimental value
 
 	void quickSort2(Iter first, Iter last, int64_t dist) {
 		if (dist > distLimit) {
@@ -181,7 +190,7 @@ private:
 template<class Func, class Arr>
 auto someSort(Func&& sort, Arr arr) {
 	std::vector<size_t> arrCopy(arr->size());
-	std::copy(arr->begin(), arr->end(), arrCopy.begin());
+	std::copy(arr->begin(), arr->end(), arrCopy.begin()); 
 
 	auto startTime = std::chrono::steady_clock::now();
 	sort(arrCopy.begin(), arrCopy.end());
