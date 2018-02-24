@@ -55,7 +55,7 @@ Iters2El<Iter> partQSort(Iter begin, Iter end, int64_t dist) {
 		std::iter_swap(left, right);
 
 		if (*left == pivot) {
-			//mmove to begin an element equal to pivot
+			//move to begin an element equal to pivot
 			std::iter_swap(++leftEq, left);
 		}
 
